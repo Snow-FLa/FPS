@@ -3,11 +3,6 @@ using UnityEngine.InputSystem; // 신버전 입력 시스템 사용
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Input KeyCodes")]
-    [SerializeField]
-    private KeyCode keyCodeRun = KeyCode.LeftShift;
-    [SerializeField]
-    private KeyCode keyCodeJump = KeyCode.Space;
 
     [Header("Audio Clips")]
     [SerializeField]
@@ -15,11 +10,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private AudioClip audioClipWalk;
 
-    private RotateToMouse rotateToMouse;  // 마우스 이동으로 카메라 회전
+    private RotateToMouse               rotateToMouse;  // 마우스 이동으로 카메라 회전
     private MovementCharacterController movement; // 플레이어 이동 제어를 위한 컴포넌트
-    private Status status; // 플레이어의 상태 (걷기, 달리기 속도 등)
-    private PlayerAnimatorController animator; // 플레이어 애니메이션 제어를 위한 컴포넌트
-    private AudioSource audioSource; // 플레이어의 발소리를 재생하기 위한 오디오 소스
+    private Status                      status; // 플레이어의 상태 (걷기, 달리기 속도 등)
+    private PlayerAnimatorController    animator; // 플레이어 애니메이션 제어를 위한 컴포넌트
+    private AudioSource                 audioSource; // 플레이어의 발소리를 재생하기 위한 오디오 소스
+    private WeaponAR                    weapon; // 무기를 이용한 공격 제어
 
     private void Awake()
     {
@@ -32,6 +28,7 @@ public class PlayerController : MonoBehaviour
         status = GetComponent<Status>();
         animator = GetComponent<PlayerAnimatorController>();
         audioSource = GetComponent<AudioSource>();
+        weapon = GetComponentInChildren<WeaponAR>();
     }
 
     private void Update()
@@ -39,6 +36,7 @@ public class PlayerController : MonoBehaviour
         UpdateRotate();
         UpdateMove();
         UpdateJump();
+        UpdateWeaponAction();
     }
 
     private void UpdateRotate()
@@ -120,6 +118,29 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             movement.Jump();
+        }
+    }
+
+    private void UpdateWeaponAction()
+    {
+        // 마우스가 연결되어 있지 않으면 작동하지 않도록 예외 처리
+        if (Mouse.current == null) return;
+
+        // 마우스 왼쪽 버튼을 누른 순간
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            weapon.StartWeaponAction();
+        }
+        // 마우스 왼쪽 버튼을 뗀 순간
+        else if (Mouse.current.leftButton.wasReleasedThisFrame)
+        {
+            weapon.StopWeaponAction();
+        }
+
+        // R 키를 누른 순간 장전 시작
+        if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            weapon.StartReload();
         }
     }
 }
