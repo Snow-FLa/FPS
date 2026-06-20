@@ -22,6 +22,13 @@ public class PlayerAnimatorController : MonoBehaviour
         animator.SetTrigger("onReload");
     }
 
+    // AR 줌 액션
+    public bool AimModeIs
+    {
+        set => animator.SetBool("isAimMode", value);
+        get => animator.GetBool("isAimMode");
+    }
+
     public void Play(string stateName, int layer, float normalizedTime)
     {
         animator.Play(stateName, layer, normalizedTime);

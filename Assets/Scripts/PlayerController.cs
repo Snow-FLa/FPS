@@ -137,6 +137,17 @@ public class PlayerController : MonoBehaviour
             weapon.StopWeaponAction();
         }
 
+        //  마우스 우클릭을 눌렀을 때 (정조준 시작)
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            weapon.StartWeaponAction(1);
+        }
+        //  마우스 우클릭을 뗐을 때 (정조준 해제)
+        else if (Mouse.current != null && Mouse.current.rightButton.wasReleasedThisFrame)
+        {
+            weapon.StopWeaponAction(1);
+        }
+
         // R 키를 누른 순간 장전 시작
         if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
         {

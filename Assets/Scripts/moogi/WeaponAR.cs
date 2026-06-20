@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 [System.Serializable]
 public class AmmoEvent : UnityEngine.Events.UnityEvent<int, int> { }
@@ -15,7 +16,10 @@ public class WeaponAR : MonoBehaviour
 
     [Header("Spawn Points")]
     [SerializeField]
-    private Transform casingSpawnPoint;                // 총알 생성 위치
+    private Transform casingSpawnPoint;                // 탄피 생성 위치
+    [SerializeField]
+    private Transform bulletSpawnPoint;                // 총알 생성 위치
+
 
     [Header("Audio Clips")]
     [SerializeField]
@@ -31,12 +35,22 @@ public class WeaponAR : MonoBehaviour
     [SerializeField]
     private WeaponSetting weaponSetting;             // 무기 설정
 
+    [Header("Aim UI")]
+    [SerializeField]
+    private Image Aim;                               // 줌에 따른 조준점 이미지
+
     private float lastFireTime = 0;                          // 마지막 발사 시간
     private bool isReload = false;                          // 재장전 중인지 여부
+    private bool isAttack = false;         // 공격 여부 체크용
+    private bool isModeChange = false;     // 모드 전환 여부 체크용
+    private float defaultModeFOV = 60;      // 기본모드에서의 카메라 FOV
+    private float aimModeFOV = 40;          // AIM모드에서의 카메라 FOV
 
     private AudioSource audioSource;                 // 사운드 재생 컴포넌트
     private PlayerAnimatorController animator;   // 애니메이터 컨트롤러
     private CasingMemoryPool casingMemoryPool;               // 탄피 생성, 관리
+    private HitMemoryPool hitMemoryPool;                    // 공격효과 생성, 관리
+    private Camera mainCamera;                              // 광선 발사
 
     public WeaponName WeaponName => weaponSetting.weaponName;    // 무기 이름
 
@@ -45,6 +59,8 @@ public class WeaponAR : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         animator = GetComponentInParent<PlayerAnimatorController>();
         casingMemoryPool = GetComponent<CasingMemoryPool>();
+        hitMemoryPool = GetComponent<HitMemoryPool>();
+        mainCamera = Camera.main;
 
         // 처음 탄 수 최대
         weaponSetting.currentAmmo = weaponSetting.maxAmmo;
@@ -58,15 +74,16 @@ public class WeaponAR : MonoBehaviour
         muzzleFlashEffect.SetActive(false);
 
         onAmmoEvent.Invoke(weaponSetting.currentAmmo, weaponSetting.maxAmmo);
+
+        ResetVariables();
     }
 
     public void StartWeaponAction(int type = 0)
     {
-        // 재장전시 액션 x
-        if(isReload == true)
-        {
-            return;
-        }
+        
+
+        // 모드 전환 중 액션 x
+        if (isModeChange == true) return;
 
         // 마우스 좌클 : 공격
         if (type == 0)
@@ -82,12 +99,21 @@ public class WeaponAR : MonoBehaviour
                 OnAttack();
             }
         }
-    }
+        // 마우스 우클 : 줌
+        else
+        {
+            // 공격 중 모드 전환x
+            if (isAttack == true) return;
+
+            StartCoroutine("OnModeChange");
+        }
+}
 
     public void StopWeaponAction(int type = 0)
     {
         if (type == 0)
         {
+            isAttack = false;
             StopCoroutine("OnAttackLoop");
         }
     }
@@ -138,7 +164,14 @@ public class WeaponAR : MonoBehaviour
             onAmmoEvent.Invoke(weaponSetting.currentAmmo, weaponSetting.maxAmmo);
 
             // 공격 애니메이션 재생
-            animator.Play("Fire", -1, 0);
+            // animator.Play("Fire", -1, 0);
+            string animName = animator.AimModeIs == true ? "aimfire" : "Fire";
+            animator.Play(animName, -1, 0);
+            // 총구 이펙트
+            if (animator.AimModeIs == false)
+            {
+                StartCoroutine("OnMuzzleFlashEffect");
+            }
 
             // 발사 효과 재생
             StartCoroutine("OnMuzzleFlashEffect");
@@ -148,8 +181,77 @@ public class WeaponAR : MonoBehaviour
 
             // 탄피 생성
             casingMemoryPool.SpawnCasing(casingSpawnPoint.position, transform.right);
+
+            // 광선 발사
+            TwoStepRaycast();
         }
 
+    }
+
+    private void TwoStepRaycast()
+    {
+        Ray ray;
+        RaycastHit hit;
+        Vector3 targetPoint = Vector3.zero;
+
+        // 화면의 중앙 좌표 (Aim 기준으로 Raycast 연산)
+        ray = mainCamera.ViewportPointToRay(Vector2.one * 0.5f);
+        // 공격 사거리(attackDistance) 안에 부딪히는 오브젝트가 있으면 targetPoint는 광선에 부딪힌 위치
+        if (Physics.Raycast(ray, out hit, weaponSetting.attackDistance))
+        {
+            targetPoint = hit.point;
+        }
+        // 공격 사거리 안에 부딪히는 오브젝트가 없으면 targetPoint는 최대 사거리 위치
+        else
+        {
+            targetPoint = ray.origin + ray.direction * weaponSetting.attackDistance;
+        }
+        Debug.DrawRay(ray.origin, ray.direction * weaponSetting.attackDistance, Color.red);
+
+        // 첫번째 Raycast연산으로 얻어진 targetPoint를 목표지점으로 설정하고,
+        // 총구를 시작지점으로 하여 Raycast 연산
+        Vector3 attackDirection = (targetPoint - bulletSpawnPoint.position).normalized;
+        if (Physics.Raycast(bulletSpawnPoint.position, attackDirection, out hit, weaponSetting.attackDistance))
+        {
+            // 🌟 이전 단계에서 수정했던 HitMemoryPool의 이름에 맞게 적용했습니다.
+            hitMemoryPool.SpawnHit(hit);
+        }
+        Debug.DrawRay(bulletSpawnPoint.position, attackDirection * weaponSetting.attackDistance, Color.blue);
+    }
+
+    private IEnumerator OnModeChange()
+    {
+        float current = 0;
+        float percent = 0;
+        float time = 0.35f;
+
+        animator.AimModeIs = !animator.AimModeIs;
+        Aim.enabled = !Aim.enabled;
+
+        float start = mainCamera.fieldOfView;
+        float end = animator.AimModeIs == true ? aimModeFOV : defaultModeFOV;
+
+        isModeChange = true;
+
+        while (percent < 1)
+        {
+            current += Time.deltaTime;
+            percent = current / time;
+
+            // mode에 따라 카메라의 시야각을 변경
+            mainCamera.fieldOfView = Mathf.Lerp(start, end, percent);
+
+            yield return null;
+        }
+
+        isModeChange = false;
+    }
+
+    private void ResetVariables()
+    {
+        isReload = false;
+        isAttack = false;
+        isModeChange = false;
     }
 
     private IEnumerator OnMuzzleFlashEffect()
@@ -190,8 +292,8 @@ public class WeaponAR : MonoBehaviour
 
         while (true)
         {
-            // 사운드 재생이 끝나고, 캐릭터가 다시 Move 상태로 돌아왔다면 장전 완료
-            if (audioSource.isPlaying == false && animator.CurrentAnimationIs("Move"))
+            // Move(기본) 상태이거나 aimfirepose(정조준) 상태로 돌아왔을 때 모두 장전 완료 처리
+            if (audioSource.isPlaying == false && (animator.CurrentAnimationIs("Move") || animator.CurrentAnimationIs("aimfirepose")))
             {
                 weaponSetting.currentAmmo = weaponSetting.maxAmmo + chamberRound;
                 onAmmoEvent.Invoke(weaponSetting.currentAmmo, weaponSetting.maxAmmo);
