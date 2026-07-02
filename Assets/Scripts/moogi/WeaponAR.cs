@@ -213,8 +213,13 @@ public class WeaponAR : MonoBehaviour
         Vector3 attackDirection = (targetPoint - bulletSpawnPoint.position).normalized;
         if (Physics.Raycast(bulletSpawnPoint.position, attackDirection, out hit, weaponSetting.attackDistance))
         {
-            // 🌟 이전 단계에서 수정했던 HitMemoryPool의 이름에 맞게 적용했습니다.
             hitMemoryPool.SpawnHit(hit);
+
+            if (hit.transform.CompareTag("HitEnemy"))
+            {
+                // 적에게 데미지 전달
+                hit.transform.GetComponent<EnemyFSM>().TakeDamage(weaponSetting.damage);
+            }
         }
         Debug.DrawRay(bulletSpawnPoint.position, attackDirection * weaponSetting.attackDistance, Color.blue);
     }

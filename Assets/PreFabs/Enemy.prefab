@@ -12,9 +12,10 @@ GameObject:
   - component: {fileID: 4608308832799435039}
   - component: {fileID: -3040007182702719281}
   - component: {fileID: -3042829135994224610}
+  - component: {fileID: 7640632428110451810}
   m_Layer: 0
   m_Name: Enemy
-  m_TagString: Untagged
+  m_TagString: HitEnemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48,6 +49,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac1778b5ae245154d8d7e117b1b80de3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyFSM
+  targetRecognitionRange: 8
+  pursuitLimitRange: 10
+  projectilePrefab: {fileID: 8408975057487582864, guid: 199443779ece4534c80eba7f16adbb4a, type: 3}
+  projectileSpawnPoint: {fileID: 4457207677729352263}
+  attackRange: 5
+  attackRate: 1
 --- !u!114 &-3040007182702719281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -60,8 +67,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 041187f8af3411947aaa7b39d4b9d25f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Status
+  onHPEvent:
+    m_PersistentCalls:
+      m_Calls: []
   walkSpeed: 1.5
   runSpeed: 3
+  maxHP: 100
 --- !u!195 &-3042829135994224610
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -84,6 +95,33 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!54 &7640632428110451810
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3894193308380818443}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 126
+  m_CollisionDetection: 0
 --- !u!1 &5103278462469152220
 GameObject:
   m_ObjectHideFlags: 0

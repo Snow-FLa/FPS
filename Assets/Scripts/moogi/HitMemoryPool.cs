@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 열거형 이름도 통일감을 위해 HitType으로 변경했습니다.
-public enum HitType { Normal = 0, Obstacle, }
+public enum HitType { Normal = 0, Obstacle, Enemy, }
 
 public class HitMemoryPool : MonoBehaviour
 {
@@ -29,6 +29,10 @@ public class HitMemoryPool : MonoBehaviour
         else if (hit.transform.CompareTag("HitObs"))
         {
             OnSpawnHit(HitType.Obstacle, hit.point, Quaternion.LookRotation(hit.normal));
+        }
+        else if (hit.transform.CompareTag("HitEnemy"))
+        {
+            OnSpawnHit(HitType.Enemy, hit.point, Quaternion.LookRotation(hit.normal));
         }
     }
 
